@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "food-delivery-mcp-system",
   "buildCommand": "npm run build:prod",
   "outputDirectory": "build",
   "installCommand": "npm install",
@@ -43,7 +42,7 @@
   ],
   "functions": {
     "api/*.js": {
-      "runtime": "nodejs18.x",
+      "runtime": "@vercel/node",
       "maxDuration": 30,
       "memory": 1024
     }
