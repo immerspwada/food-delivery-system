@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "name": "food-delivery-system",
-  "buildCommand": "cd client && npm run build:prod",
-  "outputDirectory": "client/build",
-  "installCommand": "npm run install-all",
-  "devCommand": "npm run dev",
+  "name": "food-delivery-mcp-system",
+  "buildCommand": "npm run build:prod",
+  "outputDirectory": "build",
+  "installCommand": "npm install",
+  "devCommand": "npm start",
   "routes": [
     {
       "src": "/api/(.*)",
@@ -17,28 +17,28 @@
     },
     {
       "src": "/(.*\\.(js|jsx|ts|tsx|css|json|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))",
-      "dest": "/client/build/$1",
+      "dest": "/build/$1",
       "headers": {
         "Cache-Control": "public, max-age=31536000, immutable"
       }
     },
     {
       "src": "/manifest.json",
-      "dest": "/client/build/manifest.json",
+      "dest": "/build/manifest.json",
       "headers": {
         "Cache-Control": "public, max-age=86400"
       }
     },
     {
       "src": "/sw.js",
-      "dest": "/client/build/sw.js",
+      "dest": "/build/sw.js",
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate"
       }
     },
     {
       "src": "/(.*)",
-      "dest": "/client/build/index.html"
+      "dest": "/build/index.html"
     }
   ],
   "functions": {
@@ -50,11 +50,13 @@
   },
   "regions": ["sin1"],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "REACT_APP_ENABLE_MCP": "true"
   },
   "build": {
     "env": {
-      "NODE_ENV": "production"
+      "NODE_ENV": "production",
+      "REACT_APP_ENABLE_MCP": "true"
     }
   }
 }
