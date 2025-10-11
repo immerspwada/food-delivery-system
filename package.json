@@ -19,11 +19,17 @@
     "deploy:netlify": "cd client && npm run build && netlify deploy --prod --dir=build",
     "deploy:vercel": "cd client && npm run build && vercel --prod"
   },
-  "keywords": ["food-delivery", "react", "node", "express", "socket.io"],
+  "keywords": [
+    "food-delivery",
+    "react",
+    "node",
+    "express",
+    "socket.io"
+  ],
   "author": "Food Delivery Team",
   "license": "MIT",
   "dependencies": {
-    "@supabase/supabase-js": "^2.38.0"
+    "@supabase/supabase-js": "^2.75.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
