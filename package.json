@@ -1,0 +1,23 @@
+{
+  "name": "food-delivery-system",
+  "version": "1.0.0",
+  "description": "Complete Food Delivery System with Admin Panel",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "dev-mock": "cd client && REACT_APP_USE_MOCK_API=true npm start",
+    "server": "nodemon server/index.js",
+    "client": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "install-all": "npm install && cd client && npm install --legacy-peer-deps && cd ../server && npm install",
+    "seed": "cd server && node ../scripts/seed-database.js",
+    "mock-orders": "cd server && node ../scripts/generate-mock-orders.js"
+  },
+  "keywords": ["food-delivery", "react", "node", "express", "socket.io"],
+  "author": "Food Delivery Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.1"
+  }
+}
