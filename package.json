@@ -6,16 +6,25 @@
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "dev-mock": "cd client && REACT_APP_USE_MOCK_API=true npm start",
-    "server": "nodemon server/index.js",
+    "server": "cd server && npm run dev",
+    "server:prod": "cd server && npm start",
     "client": "cd client && npm start",
     "build": "cd client && npm run build",
+    "build:prod": "cd client && npm run build:prod",
+    "preview": "cd client && npm run preview",
     "install-all": "npm install && cd client && npm install --legacy-peer-deps && cd ../server && npm install",
+    "postinstall": "npm run install-all",
     "seed": "cd server && node ../scripts/seed-database.js",
-    "mock-orders": "cd server && node ../scripts/generate-mock-orders.js"
+    "mock-orders": "cd server && node ../scripts/generate-mock-orders.js",
+    "deploy:netlify": "cd client && npm run build && netlify deploy --prod --dir=build",
+    "deploy:vercel": "cd client && npm run build && vercel --prod"
   },
   "keywords": ["food-delivery", "react", "node", "express", "socket.io"],
   "author": "Food Delivery Team",
   "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2",
     "nodemon": "^3.0.1"
