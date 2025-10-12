@@ -3,11 +3,16 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const http = require('http');
 const socketIo = require('socket.io');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 // Environment validation
 const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_ANON_KEY'];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+// JWT Secret (in production, use a secure random string)
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 if (missingEnvVars.length > 0) {
   console.error('❌ Missing required environment variables:', missingEnvVars);
@@ -47,6 +52,32 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Authentication middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Admin role check middleware
+const requireAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+};
 
 // Security headers
 app.use((req, res, next) => {
@@ -100,6 +131,53 @@ io.on('connection', (socket) => {
 
 // Routes
 
+// Get all restaurants
+app.get('/api/restaurants', async (req, res) => {
+  try {
+    const { data: restaurants, error } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching restaurants:', error);
+      return res.status(500).json({ error: 'Failed to fetch restaurants' });
+    }
+
+    res.json(restaurants);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get single restaurant by ID
+app.get('/api/restaurants/:id', async (req, res) => {
+  try {
+    const { data: restaurant, error } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('is_active', true)
+      .single();
+
+    if (error) {
+      console.error('Error fetching restaurant:', error);
+      return res.status(500).json({ error: 'Failed to fetch restaurant' });
+    }
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    res.json(restaurant);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get all categories
 app.get('/api/categories', async (req, res) => {
   try {
@@ -112,6 +190,8 @@ app.get('/api/categories', async (req, res) => {
     if (error) throw error;
     res.json(data);
   } catch (error) {
+    console.error('❌ Order creation error:', error);
+    console.error('Request body:', req.body);
     res.status(500).json({ error: error.message });
   }
 });
@@ -169,7 +249,21 @@ app.get('/api/menu-items/:id', async (req, res) => {
 // Create new order
 app.post('/api/orders', async (req, res) => {
   try {
-    const { customer_name, customer_phone, customer_address, items, notes } = req.body;
+    const { customer_name, customer_phone, customer_address, delivery_address, items, notes } = req.body;
+    
+    // Get user_id from JWT token if available
+    let user_id = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, JWT_SECRET);
+        user_id = decoded.userId;
+      } catch (error) {
+        // Token is invalid, but we'll still allow the order (guest order)
+        console.log('Invalid token for order creation:', error.message);
+      }
+    }
     
     // Calculate total amount
     const total_amount = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
@@ -180,10 +274,11 @@ app.post('/api/orders', async (req, res) => {
       .insert([{
         customer_name,
         customer_phone,
-        customer_address,
+        delivery_address: delivery_address || customer_address,
         total_amount,
         notes,
-        status: 'pending'
+        status: 'pending',
+        user_id
       }])
       .select()
       .single();
@@ -194,7 +289,6 @@ app.post('/api/orders', async (req, res) => {
     const orderItems = items.map(item => ({
       order_id: orderData.id,
       menu_item_id: item.menu_item_id,
-      menu_item_name: item.menu_item_name,
       quantity: item.quantity,
       unit_price: item.unit_price,
       total_price: item.unit_price * item.quantity,
@@ -231,11 +325,38 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// Get all orders (Admin)
+// Get orders (Admin or User's own orders)
 app.get('/api/orders', async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
     const offset = (page - 1) * limit;
+    
+    // Check if user is authenticated
+    let user_id = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, JWT_SECRET);
+        user_id = decoded.userId;
+      } catch (error) {
+        // Invalid token, return empty orders
+        return res.json({
+          orders: [],
+          total: 0,
+          page: parseInt(page),
+          totalPages: 0
+        });
+      }
+    } else {
+      // No token, return empty orders
+      return res.json({
+        orders: [],
+        total: 0,
+        page: parseInt(page),
+        totalPages: 0
+      });
+    }
     
     let query = supabase
       .from('orders')
@@ -246,6 +367,11 @@ app.get('/api/orders', async (req, res) => {
           menu_items (name, image_url)
         )
       `, { count: 'exact' });
+    
+    // Filter by user_id for regular users
+    if (user_id) {
+      query = query.eq('user_id', user_id);
+    }
     
     if (status) {
       query = query.eq('status', status);
@@ -308,6 +434,176 @@ app.patch('/api/orders/:id/status', async (req, res) => {
     
     res.json(data);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Authentication endpoints
+// Register new user
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, name, phone } = req.body;
+
+    // Validate required fields
+    if (!email || !password || !name || !phone) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Check if user already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists with this email' });
+    }
+
+    // Hash password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Create user
+    const { data: user, error } = await supabase
+      .from('users')
+      .insert([{
+        email,
+        password_hash: passwordHash,
+        name,
+        phone,
+        role: 'customer'
+      }])
+      .select('id, email, name, phone, role, created_at')
+      .single();
+
+    if (error) throw error;
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      user,
+      token
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Login user
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate required fields
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Find user by email
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, password_hash, name, phone, role, is_active')
+      .eq('email', email)
+      .single();
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Check if user is active
+    if (!user.is_active) {
+      return res.status(401).json({ error: 'Account is deactivated' });
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Update last login
+    await supabase
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', user.id);
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Remove password hash from response
+    const { password_hash, ...userWithoutPassword } = user;
+
+    res.json({
+      message: 'Login successful',
+      user: userWithoutPassword,
+      token
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user profile (protected route)
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, name, phone, role, created_at, last_login')
+      .eq('id', req.user.userId)
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ user });
+  } catch (error) {
+    console.error('Profile error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update user profile (protected route)
+app.patch('/api/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    const updates = {};
+
+    if (name) updates.name = name;
+    if (phone) updates.phone = phone;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', req.user.userId)
+      .select('id, email, name, phone, role, created_at, last_login')
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      message: 'Profile updated successfully',
+      user
+    });
+  } catch (error) {
+    console.error('Profile update error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -411,6 +707,43 @@ app.delete('/api/admin/menu-items/:id', async (req, res) => {
 });
 
 // Get sales statistics
+// Get all orders (Admin only)
+app.get('/api/admin/orders', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { status, page = 1, limit = 20 } = req.query;
+    const offset = (page - 1) * limit;
+    
+    let query = supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          *,
+          menu_items (name, image_url)
+        )
+      `, { count: 'exact' });
+    
+    if (status) {
+      query = query.eq('status', status);
+    }
+    
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    
+    if (error) throw error;
+    
+    res.json({
+      orders: data,
+      total: count,
+      page: parseInt(page),
+      totalPages: Math.ceil(count / limit)
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/admin/stats', async (req, res) => {
   try {
     const { from, to } = req.query;
@@ -438,6 +771,125 @@ app.get('/api/admin/stats', async (req, res) => {
       statusCounts
     });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin user management endpoints
+// Get all users (admin only)
+app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { page = 1, limit = 10, search = '' } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = supabase
+      .from('users')
+      .select('id, email, name, phone, role, is_active, created_at, last_login', { count: 'exact' });
+
+    // Add search filter if provided
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+    }
+
+    // Add pagination
+    query = query.range(offset, offset + limit - 1).order('created_at', { ascending: false });
+
+    const { data: users, error, count } = await query;
+    if (error) throw error;
+
+    res.json({
+      users,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: count,
+        totalPages: Math.ceil(count / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user details (admin only)
+app.get('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, name, phone, role, is_active, email_verified, created_at, last_login, updated_at')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get user's order statistics
+    const { data: orders, error: ordersError } = await supabase
+      .from('orders')
+      .select('id, total_amount, status, created_at')
+      .eq('user_id', req.params.id);
+
+    if (ordersError) {
+      console.error('Orders fetch error:', ordersError);
+    }
+
+    const orderStats = {
+      totalOrders: orders?.length || 0,
+      totalSpent: orders?.reduce((sum, order) => sum + parseFloat(order.total_amount || 0), 0) || 0,
+      recentOrders: orders?.slice(0, 5) || []
+    };
+
+    res.json({
+      user,
+      orderStats
+    });
+  } catch (error) {
+    console.error('Get user details error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update user status (admin only)
+app.patch('/api/admin/users/:id/status', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { is_active } = req.body;
+
+    if (typeof is_active !== 'boolean') {
+      return res.status(400).json({ error: 'is_active must be a boolean value' });
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .update({ is_active })
+      .eq('id', req.params.id)
+      .select('id, email, name, phone, role, is_active')
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      message: `User ${is_active ? 'activated' : 'deactivated'} successfully`,
+      user
+    });
+  } catch (error) {
+    console.error('Update user status error:', error);
     res.status(500).json({ error: error.message });
   }
 });

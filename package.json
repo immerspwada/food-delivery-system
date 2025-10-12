@@ -17,7 +17,12 @@
     "seed": "cd server && node ../scripts/seed-database.js",
     "mock-orders": "cd server && node ../scripts/generate-mock-orders.js",
     "deploy:netlify": "cd client && npm run build && netlify deploy --prod --dir=build",
-    "deploy:vercel": "cd client && npm run build && vercel --prod"
+    "deploy:vercel": "cd client && npm run build && vercel --prod",
+    "test": "node test-bot.js",
+    "test:advanced": "node test-bot-advanced.js",
+    "test:basic": "node test-bot.js",
+    "test:performance": "node test-bot-advanced.js",
+    "test:bot": "echo '🤖 เริ่มต้นบอททดสอบ...' && node test-bot.js"
   },
   "keywords": [
     "food-delivery",
@@ -29,7 +34,8 @@
   "author": "Food Delivery Team",
   "license": "MIT",
   "dependencies": {
-    "@supabase/supabase-js": "^2.75.0"
+    "@supabase/supabase-js": "^2.75.0",
+    "axios": "^1.12.2"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
