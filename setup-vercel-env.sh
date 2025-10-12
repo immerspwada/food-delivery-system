@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# 🔧 Setup Vercel Environment Variables
+echo "🔧 กำลังตั้งค่า Environment Variables ใน Vercel..."
+
+echo ""
+echo "📋 กรุณาไปที่ Vercel Dashboard และตั้งค่า Environment Variables:"
+echo "🌐 https://vercel.com/dashboard"
+echo ""
+echo "📱 Frontend Variables:"
+echo "REACT_APP_SUPABASE_URL=https://bsyernhbtlqwiilkiuig.supabase.co"
+echo "REACT_APP_SUPABASE_ANON_KEY=[YOUR_SUPABASE_ANON_KEY]"
+echo "REACT_APP_ENABLE_MCP=true"
+echo "REACT_APP_API_URL=https://your-app.vercel.app/api"
+echo ""
+echo "🔧 Backend Variables:"
+echo "SUPABASE_SERVICE_ROLE_KEY=[YOUR_SUPABASE_SERVICE_ROLE_KEY]"
+echo "NODE_ENV=production"
+echo ""
+echo "📝 หมายเหตุ:"
+echo "- แทนที่ [YOUR_SUPABASE_ANON_KEY] ด้วย Anon Key จาก Supabase"
+echo "- แทนที่ [YOUR_SUPABASE_SERVICE_ROLE_KEY] ด้วย Service Role Key จาก Supabase"
+echo "- แทนที่ your-app ด้วยชื่อ app ของคุณใน Vercel"
+echo ""
+echo "✅ เสร็จแล้ว! ตั้งค่า Environment Variables ใน Vercel Dashboard"
