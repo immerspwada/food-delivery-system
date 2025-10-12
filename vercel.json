@@ -40,13 +40,6 @@
       "dest": "/build/index.html"
     }
   ],
-  "functions": {
-    "api/*.js": {
-      "runtime": "@vercel/node",
-      "maxDuration": 30,
-      "memory": 1024
-    }
-  },
   "regions": ["sin1"],
   "env": {
     "NODE_ENV": "production",
