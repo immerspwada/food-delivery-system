@@ -1,0 +1,16 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "API functions for food delivery system",
+  "main": "index.js",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.75.0",
+    "bcryptjs": "^2.4.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^13.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
