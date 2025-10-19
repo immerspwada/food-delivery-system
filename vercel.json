@@ -1,62 +1,59 @@
 {
-  "rewrites": [
+  "version": 2,
+  "buildCommand": "cd client && npm install && npm run build",
+  "outputDirectory": "client/build",
+  "installCommand": "npm install",
+  "devCommand": "npm start",
+  "routes": [
     {
-      "source": "/api/auth/(.*)",
-      "destination": "/api/auth/$1"
+      "src": "/api/(.*)",
+      "dest": "/api/$1",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+        "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization"
+      }
     },
     {
-      "source": "/api/user/(.*)",
-      "destination": "/api/user/$1"
+      "src": "/(.*\\.(js|jsx|ts|tsx|css|json|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))",
+      "dest": "/client/build/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
     },
     {
-      "source": "/api/restaurant/(.*)",
-      "destination": "/api/restaurant/$1"
+      "src": "/manifest.json",
+      "dest": "/client/build/manifest.json",
+      "headers": {
+        "Cache-Control": "public, max-age=86400"
+      }
     },
     {
-      "source": "/api/menu/(.*)",
-      "destination": "/api/menu/$1"
+      "src": "/sw.js",
+      "dest": "/client/build/sw.js",
+      "headers": {
+        "Cache-Control": "public, max-age=0, must-revalidate"
+      }
     },
     {
-      "source": "/api/order/(.*)",
-      "destination": "/api/order/$1"
-    },
-    {
-      "source": "/api/system/(.*)",
-      "destination": "/api/system/$1"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/static/(.*)",
-      "destination": "/static/$1"
-    },
-    {
-      "source": "/manifest.json",
-      "destination": "/manifest.json"
-    },
-    {
-      "source": "/sw.js",
-      "destination": "/sw.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/client/build/index.html"
     }
   ],
-  "buildCommand": "npm run build",
-  "outputDirectory": "build",
-  "installCommand": "npm install",
+  "regions": ["sin1"],
   "env": {
+    "NODE_ENV": "production",
+    "REACT_APP_ENABLE_MCP": "true",
     "REACT_APP_SUPABASE_URL": "@react_app_supabase_url",
     "REACT_APP_SUPABASE_ANON_KEY": "@react_app_supabase_anon_key",
     "SUPABASE_URL": "@supabase_url",
     "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
     "JWT_SECRET": "@jwt_secret"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production",
+      "REACT_APP_ENABLE_MCP": "true"
+    }
   }
 }
