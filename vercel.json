@@ -5,15 +5,8 @@
       "runtime": "@vercel/node@3"
     }
   },
-  "builds": [
-    {
-      "src": "client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
-    }
-  ],
+  "buildCommand": "cd client && npm run build",
+  "outputDirectory": "client/build",
   "routes": [
     {
       "src": "/api/(.*)",
@@ -21,7 +14,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/client/$1"
+      "dest": "/$1"
     }
   ]
 }
