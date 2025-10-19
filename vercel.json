@@ -1,5 +1,10 @@
 {
   "version": 2,
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "@vercel/node@3"
+    }
+  },
   "builds": [
     {
       "src": "client/package.json",
@@ -7,44 +12,16 @@
       "config": {
         "distDir": "build"
       }
-    },
-    {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/auth/(.*)",
-      "destination": "/api/auth/$1"
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
     },
     {
-      "source": "/api/user/(.*)",
-      "destination": "/api/user/$1"
-    },
-    {
-      "source": "/api/restaurant/(.*)",
-      "destination": "/api/restaurant/$1"
-    },
-    {
-      "source": "/api/menu/(.*)",
-      "destination": "/api/menu/$1"
-    },
-    {
-      "source": "/api/order/(.*)",
-      "destination": "/api/order/$1"
-    },
-    {
-      "source": "/api/system/(.*)",
-      "destination": "/api/system/$1"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/client/$1"
+      "src": "/(.*)",
+      "dest": "/client/$1"
     }
   ]
 }
