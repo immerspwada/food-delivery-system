@@ -1,8 +1,8 @@
 // Vercel Serverless Function - Auth Refresh API
 // This function handles /api/auth/refresh endpoint
 
-import { createClient } from '@supabase/supabase-js';
-import jwt from 'jsonwebtoken';
+const { createClient } = require('@supabase/supabase-js');
+const jwt = require('jsonwebtoken');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -12,7 +12,7 @@ const supabase = createClient(
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'your-refresh-secret-key';
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

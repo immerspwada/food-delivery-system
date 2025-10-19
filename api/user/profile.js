@@ -1,8 +1,8 @@
 // Vercel Serverless Function - User Profile API
 // This function handles /api/user/profile endpoint
 
-import { createClient } from '@supabase/supabase-js';
-import jwt from 'jsonwebtoken';
+const { createClient } = require('@supabase/supabase-js');
+const jwt = require('jsonwebtoken');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -27,7 +27,7 @@ function verifyToken(req) {
   }
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');

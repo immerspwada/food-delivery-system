@@ -1,9 +1,9 @@
 // Vercel Serverless Function - Auth Login API
 // This function handles /api/auth/login endpoint
 
-import { createClient } from '@supabase/supabase-js';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+const { createClient } = require('@supabase/supabase-js');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -12,7 +12,7 @@ const supabase = createClient(
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
