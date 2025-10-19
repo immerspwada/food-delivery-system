@@ -43,12 +43,7 @@
   "regions": ["sin1"],
   "env": {
     "NODE_ENV": "production",
-    "REACT_APP_ENABLE_MCP": "true",
-    "REACT_APP_SUPABASE_URL": "@react_app_supabase_url",
-    "REACT_APP_SUPABASE_ANON_KEY": "@react_app_supabase_anon_key",
-    "SUPABASE_URL": "@supabase_url",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-    "JWT_SECRET": "@jwt_secret"
+    "REACT_APP_ENABLE_MCP": "true"
   },
   "build": {
     "env": {
